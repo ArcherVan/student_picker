@@ -28,13 +28,4 @@ def assign_names(students, names):
         students[i].name = names[i]
     return students
 
-def input_names(students):
-    for student in students:
-        while True:
-            name = input(f"请输入{student.student_id}号学生姓名：")
-            if name.strip() == "":
-                print("姓名不能为空，请重新输入。")
-                continue
-            student.name = name
-            break
 
