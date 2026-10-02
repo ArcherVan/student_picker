@@ -1,10 +1,12 @@
 from models.student import Student
+from utils.logger import log
 import random
 class Picker:
+    
     def __init__(self,students):
         self.students = students
         self.picked = set()
-
+    @log
     def pick(self):
         if len(self.picked) == len(self.students):
             return None
