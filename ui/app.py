@@ -1,121 +1,140 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
-
 from core.picker import Picker
 from models.student import Student
-from storage import loader
+from storage import loader, repository
 
 
 class StudentPickerApp:
-
     def __init__(self):
-        # 创建主窗口
         self.window = tk.Tk()
         self.window.title("学生随机抽取器")
-        self.window.geometry("600x450")
+        self.window.geometry("560x430")
         self.window.resizable(False, False)
 
-        # 当前学生列表
-        self.students = []
-
-        # 当前 Picker
+        # 启动时加载已经保存的学生
+        self.students = repository.load_students()
         self.picker = None
 
-        # 创建第一个界面
         self.create_start_page()
 
-    # 第一个界面：学生信息设置
+    def clear_window(self):
+        """清空当前窗口中的所有控件"""
+        for widget in self.window.winfo_children():
+            widget.destroy()
 
     def create_start_page(self):
-        # 标题
-        self.title_label = tk.Label(
-            self.window,
-            text="学生随机抽取器",
-            font=("微软雅黑", 22)
-        )
-        self.title_label.pack(pady=30)
+        """创建开始页面"""
+        self.clear_window()
 
-        # 学生人数
-        count_frame = tk.Frame(self.window)
-        count_frame.pack(pady=10)
+        title_font = ("Microsoft YaHei UI", 22, "bold")
+        label_font = ("Microsoft YaHei UI", 10)
+        button_font = ("Microsoft YaHei UI", 10)
+
+        # 页面主容器
+        main_frame = tk.Frame(self.window)
+        main_frame.pack(expand=True)
+
+        # 标题
+        title = tk.Label(
+            main_frame,
+            text="学生随机抽取器",
+            font=title_font
+        )
+        title.pack(pady=(0, 22))
+
+        # 学生人数输入
+        count_frame = tk.Frame(main_frame)
+        count_frame.pack(pady=(0, 15))
 
         count_label = tk.Label(
             count_frame,
-            text="学生人数：",
-            font=("微软雅黑", 12)
+            text="学生人数",
+            font=label_font
         )
-        count_label.pack(side="left")
+        count_label.pack()
 
         self.count_entry = tk.Entry(
             count_frame,
-            width=10,
-            font=("微软雅黑", 12)
+            width=20,
+            font=("Microsoft YaHei UI", 10),
+            justify="center"
         )
-        self.count_entry.pack(side="left")
+        self.count_entry.pack(pady=(6, 0))
 
-        # 手动添加按钮
+        # 统一按钮配置
+        button_config = {
+            "font": button_font,
+            "width": 18,
+            "height": 1
+        }
+
+        # 手动输入
         manual_button = tk.Button(
-            self.window,
-            text="手动添加学生",
-            width=20,
-            command=self.manual_input
+            main_frame,
+            text="手动输入学生",
+            command=self.manual_input,
+            **button_config
         )
-        manual_button.pack(pady=10)
+        manual_button.pack(pady=4)
 
-        # TXT 导入按钮
+        # TXT 导入
         import_button = tk.Button(
-            self.window,
-            text="从 TXT 导入学生",
-            width=20,
-            command=self.import_from_txt
+            main_frame,
+            text="从 TXT 文件导入",
+            command=self.import_from_txt,
+            **button_config
         )
-        import_button.pack(pady=10)
+        import_button.pack(pady=4)
+
+        # 已保存学生
+        if self.students:
+            saved_button = tk.Button(
+                main_frame,
+                text=f"使用已保存学生（{len(self.students)}人）",
+                command=self.start_picker,
+                **button_config
+            )
+            saved_button.pack(pady=4)
 
         # 状态提示
         self.status_label = tk.Label(
-            self.window,
-            text="请输入学生人数",
-            font=("微软雅黑", 10)
+            main_frame,
+            text="",
+            font=("Microsoft YaHei UI", 9)
         )
-        self.status_label.pack(pady=20)
-
-    # 获取学生人数
+        self.status_label.pack(pady=(10, 0))
 
     def get_student_count(self):
-        text = self.count_entry.get().strip()
-
+        """获取并检查学生人数"""
         try:
-            count = int(text)
+            count = int(self.count_entry.get())
+
+            if count <= 0:
+                self.status_label.config(
+                    text="学生人数必须大于0"
+                )
+                return None
+
+            return count
+
         except ValueError:
-            messagebox.showerror(
-                "输入错误",
-                "学生人数必须是整数。"
+            self.status_label.config(
+                text="请输入正确的整数"
             )
             return None
-
-        if count <= 0:
-            messagebox.showerror(
-                "输入错误",
-                "学生人数必须大于 0。"
-            )
-            return None
-
-        return count
-
-    # 创建学生
 
     def create_students(self, count):
+        """根据人数创建学生对象"""
         students = []
 
         for i in range(1, count + 1):
-            student = Student(i, "")
-            students.append(student)
+            students.append(Student(i, ""))
 
         return students
 
-    # 手动输入学生
-
     def manual_input(self):
+        """进入手动输入学生姓名页面"""
         count = self.get_student_count()
 
         if count is None:
@@ -123,23 +142,17 @@ class StudentPickerApp:
 
         self.students = self.create_students(count)
 
-        self.create_name_page()
-
-    # 创建姓名输入界面
-
-    def create_name_page(self):
         self.clear_window()
 
-        title_label = tk.Label(
+        title = tk.Label(
             self.window,
             text="请输入学生姓名",
-            font=("微软雅黑", 20)
+            font=("Microsoft YaHei UI", 18, "bold")
         )
-        title_label.pack(pady=20)
+        title.pack(pady=20)
 
         self.name_entries = []
 
-        # 创建姓名输入框
         for student in self.students:
             frame = tk.Frame(self.window)
             frame.pack(pady=3)
@@ -147,47 +160,50 @@ class StudentPickerApp:
             label = tk.Label(
                 frame,
                 text=f"{student.student_id}号：",
-                width=8
+                width=8,
+                font=("Microsoft YaHei UI", 10)
             )
-            label.pack(side="left")
+            label.pack(side=tk.LEFT)
 
             entry = tk.Entry(
                 frame,
-                width=25
+                width=30,
+                font=("Microsoft YaHei UI", 10)
             )
-            entry.pack(side="left")
+            entry.pack(side=tk.LEFT)
 
             self.name_entries.append(entry)
 
-        # 完成按钮
         finish_button = tk.Button(
             self.window,
             text="完成",
             width=15,
+            font=("Microsoft YaHei UI", 10),
             command=self.finish_manual_input
         )
         finish_button.pack(pady=20)
 
-    # 完成手动输入
-
     def finish_manual_input(self):
+        """完成手动输入"""
         for i, entry in enumerate(self.name_entries):
             name = entry.get().strip()
 
             if name == "":
-                messagebox.showerror(
-                    "输入错误",
-                    f"{i + 1}号学生姓名不能为空。"
+                messagebox.showwarning(
+                    "提示",
+                    f"{i + 1}号学生姓名不能为空"
                 )
                 return
 
             self.students[i].name = name
 
+        # 保存学生数据
+        repository.save_students(self.students)
+
         self.start_picker()
 
-    # TXT 导入
-
     def import_from_txt(self):
+        """从TXT文件导入学生姓名"""
         count = self.get_student_count()
 
         if count is None:
@@ -196,13 +212,12 @@ class StudentPickerApp:
         filename = filedialog.askopenfilename(
             title="选择学生名单",
             filetypes=[
-                ("TXT 文件", "*.txt"),
+                ("TXT文件", "*.txt"),
                 ("所有文件", "*.*")
             ]
         )
 
-        # 用户取消选择
-        if filename == "":
+        if not filename:
             return
 
         students = self.create_students(count)
@@ -221,113 +236,131 @@ class StudentPickerApp:
 
         self.students = students
 
+        # 保存导入的学生数据
+        repository.save_students(self.students)
+
+        messagebox.showinfo(
+            "导入成功",
+            message
+        )
+
         self.start_picker()
 
-    # 开始抽取
-
     def start_picker(self):
+        """开始抽取"""
+        if not self.students:
+            messagebox.showwarning(
+                "提示",
+                "当前没有学生数据"
+            )
+            return
+
         self.picker = Picker(self.students)
 
         self.create_draw_page()
 
-    # 抽取界面
-
     def create_draw_page(self):
+        """创建抽取页面"""
         self.clear_window()
 
-        title_label = tk.Label(
-            self.window,
-            text="学生随机抽取器",
-            font=("微软雅黑", 22)
-        )
-        title_label.pack(pady=30)
+        # 抽取页面主容器
+        main_frame = tk.Frame(self.window)
+        main_frame.pack(expand=True)
 
-        self.result_label = tk.Label(
-            self.window,
-            text="等待抽取",
-            font=("微软雅黑", 28)
+        # 标题
+        title = tk.Label(
+            main_frame,
+            text="学生随机抽取",
+            font=("Microsoft YaHei UI", 20, "bold")
         )
-        self.result_label.pack(pady=30)
+        title.pack(pady=(0, 18))
+
+        # 当前抽取结果
+        self.result_label = tk.Label(
+            main_frame,
+            text="准备抽取",
+            font=("Microsoft YaHei UI", 22, "bold")
+        )
+        self.result_label.pack(pady=(0, 12))
+
+        # 抽取进度
+        self.count_label = tk.Label(
+            main_frame,
+            text=self.get_count_text(),
+            font=("Microsoft YaHei UI", 10)
+        )
+        self.count_label.pack(pady=(0, 18))
 
         # 抽取按钮
         draw_button = tk.Button(
-            self.window,
+            main_frame,
             text="抽取学生",
-            width=20,
-            height=2,
+            width=18,
+            height=1,
+            font=("Microsoft YaHei UI", 10),
             command=self.draw_student
         )
-        draw_button.pack(pady=10)
+        draw_button.pack(pady=5)
 
-        # 重新开始
+        # 重新开始按钮
         reset_button = tk.Button(
-            self.window,
-            text="重新开始",
-            width=20,
+            main_frame,
+            text="重新开始抽取",
+            width=18,
+            height=1,
+            font=("Microsoft YaHei UI", 10),
             command=self.reset_picker
         )
-        reset_button.pack(pady=10)
+        reset_button.pack(pady=5)
 
-        # 返回设置
+        # 返回设置按钮
         back_button = tk.Button(
-            self.window,
-            text="重新设置学生",
-            width=20,
+            main_frame,
+            text="返回设置",
+            width=18,
+            height=1,
+            font=("Microsoft YaHei UI", 10),
             command=self.back_to_start
         )
-        back_button.pack(pady=10)
-
-        self.count_label = tk.Label(
-            self.window,
-            text=self.get_count_text()
-        )
-        self.count_label.pack(pady=10)
-
-    # 抽取学生
+        back_button.pack(pady=5)
 
     def draw_student(self):
+        """抽取一个学生"""
         student = self.picker.pick()
 
         if student is None:
-            messagebox.showinfo(
-                "抽取结束",
-                "所有学生都已经抽取过了。"
+            self.result_label.config(
+                text="所有学生都已经抽取过了"
             )
             return
 
+        print(student)
+
         self.result_label.config(
-            text=f"{student.student_id}号 - {student.name}"
+            text=str(student)
         )
 
         self.count_label.config(
             text=self.get_count_text()
         )
 
-    # 重新开始
-
     def reset_picker(self):
+        """重新开始抽取"""
+        if self.picker is None:
+            return
+
         self.picker.reset()
 
         self.result_label.config(
-            text="等待抽取"
+            text="准备抽取"
         )
 
         self.count_label.config(
             text=self.get_count_text()
         )
 
-    # 返回开始页面
-
-    def back_to_start(self):
-        self.picker = None
-        self.students = []
-
-        self.clear_window()
-        self.create_start_page()
-
-    # 获取抽取数量信息
-
     def get_count_text(self):
+        """获取抽取进度"""
         if self.picker is None:
             return ""
 
@@ -336,14 +369,20 @@ class StudentPickerApp:
 
         return f"已抽取：{picked_count} / {total_count}"
 
-    # 清空窗口
+    def back_to_start(self):
+        """返回开始页面"""
+        self.picker = None
 
-    def clear_window(self):
-        for widget in self.window.winfo_children():
-            widget.destroy()
+        # 重新读取保存的数据
+        self.students = repository.load_students()
 
-    # 启动程序
+        self.create_start_page()
 
     def run(self):
+        """运行程序"""
         self.window.mainloop()
 
+
+if __name__ == "__main__":
+    app = StudentPickerApp()
+    app.run()
